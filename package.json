@@ -31,14 +31,17 @@
     "grunt-contrib-clean": "~0.4.0",
     "grunt-contrib-nodeunit": "~0.2.0",
     "grunt": ">= 0.4.2",
-    "jszip": ">= 2.4.0 < 3"
+    "jszip": ">= 2.4.0 < 3",
+    "zip-stream": ">= 0.4.1 < 0.5"
   },
   "dependencies": {
-    "jszip": ">= 2.4.0 < 3"
+    "jszip": ">= 2.4.0 < 3",
+    "zip-stream": ">= 0.4.1 < 0.5"
   },
   "peerDependencies": {
     "grunt": ">= 0.4.2",
-    "jszip": ">= 2.4.0 < 3"
+    "jszip": ">= 2.4.0 < 3",
+    "zip-stream": ">= 0.4.1 < 0.5"
   },
   "keywords": [
     "gruntplugin", "maven", "war", "maven-war-plugin", "zip", "jszip"

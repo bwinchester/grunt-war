@@ -15,8 +15,10 @@ module.exports = function (grunt) {
 
     grunt.registerMultiTask('war', 'grunt-war generating war.', function () {
 
-        var Zip = require('jszip');
-        var zip = new Zip();
+        //var Zip = require('jszip');
+        //var zip = new Zip();
+        var Packer = require('zip-stream');
+        var zip = new Packer({highWaterMark: 1024 * 1024 * 5});
 
         var options = this.options({
             war_dist_folder: 'test',
@@ -35,8 +37,11 @@ module.exports = function (grunt) {
             webxml_webapp_extras: []
         });
 
+  grunt.log.writeln('***************** NEW ******************');
+        
         options.war_dist_folder = normalize(options.war_dist_folder);
-
+        var warFileName = warName(options);
+        
         try {
             if(!fs.existsSync(options.war_dist_folder)) {
                 fs.mkdirSync(options.war_dist_folder);
@@ -46,13 +51,17 @@ module.exports = function (grunt) {
         }
 
         try {
-            if (fs.existsSync(warName(options))) {
-               fs.renameSync(warName(options ),warName(options) + '.old');
-               fs.unlinkSync(warName(options) + '.old');
+            if (fs.existsSync(warFileName)) {
+               fs.renameSync(warFileName,warFileName + '.old');
+               fs.unlinkSync(warFileName + '.old');
             }
         } catch (err) {
-            grunt.log.error('Unable remove old ' + warName(options) + '  ' + err);
+            grunt.log.error('Unable remove old ' + warFileName + '  ' + err);
         }
+
+       
+        var outstream = fs.createWriteStream(warFileName,{ encoding: 'binary', mode: 438, flags: 'a' })
+        zip.pipe(outstream);
 
         war(zip, options, [
             {filename: 'WEB-INF/web.xml', data: options.webxml},
@@ -60,10 +69,9 @@ module.exports = function (grunt) {
         ]);
 
         war(zip, options, options.war_extras);
-
-        var warFileName = warName(options);
-        
+        // https://github.com/luciotato/waitfor
         this.files.forEach(function (each) {
+            log;
             try {
                 var file_name = each.src[0];
                 if (!grunt.file.isDir(file_name) && file_name.localeCompare(warFileName) !== 0) {
@@ -80,9 +88,11 @@ module.exports = function (grunt) {
 
 
         try {
-            log(options, 'Generating ' + warName(options));
-            var data = zip.generate({type: 'nodebuffer', compression: options.war_compression});
-            fs.writeFileSync(warName(options), data, { encoding: 'binary', mode: 438, flag: 'a' });
+            log(options, 'Generating ' + warFileName);
+            // var data = zip.generate({type: 'nodebuffer', compression: options.war_compression});
+            // fs.writeFileSync(warName(options), data, { encoding: 'binary', mode: 438, flag: 'a' });
+
+            zip.finalize();
         } catch (err) {
             grunt.log.error('Error creating war: ' + err);
             throw err;
@@ -136,17 +146,27 @@ module.exports = function (grunt) {
         }
 
         var addEntry = function (each) {
+            var doner = function (err) {
+                if (err) throw err;
+                 
+            };
+
             try {
-                if (typeof each.data === 'function') {
-                    target.file(each.filename, each.data(opts), {binary:true});
+                log(opts, 'adding ' + each.filename);
+
+                if (typeof each.data === 'function') {  // User provided data buffer.
+                    //target.file(each.filename, each.data(opts), {binary:true});
+                    target.entry(each.data(opts), { name: each.filename, mode: 438 });
                 } else {
-                    if (each.data === undefined) {
-                        target.folder(each.filename);
-                    } else {
-                        target.file(each.filename, each.data, {binary:true});
+                    if (each.data === undefined) { // It's a directory!!
+                        //target.folder(each.filename);
+                        target.entry(null, {name: each.filename + '/' });       
+                    } else {  // A real file !!!
+                        //target.file(each.filename, each.data, {binary:true});
+                        target.entry(fs.createReadStream(each.filename), {name: each.filename});   
                     }
                 }
-                log(opts, 'adding ' + each.filename);
+               
             } catch (err) {
                 grunt.log.error('Error adding: ' + each + ' to war: ' + err);
                 throw err;
