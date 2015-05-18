@@ -15,7 +15,7 @@ module.exports = function (grunt) {
     grunt.registerMultiTask('war', 'grunt-war generating war.', function () {
 
         var archiver = require('archiver');
-        var fs = require('fs');
+        var fs = require('graceful-fs');
         var done = this.async();
         
         var options = this.options({
